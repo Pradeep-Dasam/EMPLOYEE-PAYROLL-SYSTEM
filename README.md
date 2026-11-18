@@ -9,3 +9,7 @@ A C++-based Employee Payroll Management System developed using Object-Oriented P
 ## 📊 Project Presentation
 
 - [View Project PPT](https://github.com/Pradeep-Dasam/EMPLOYEE-PAYROLL-SYSTEM/blob/main/CPP%20PROJECT%20REVIEW%20PPT.pptx)
+
+## 💻 Project Source Code
+
+- [View Source Code (C++)](https://github.com/Pradeep-Dasam/EMPLOYEE-PAYROLL-SYSTEM)
