@@ -1,0 +1,1032 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <string>
+#include <vector>
+#include <limits>
+using namespace std;
+
+int readInt(const string& prompt) {
+    int val;
+    while (true) {
+        cout << prompt;
+        cin >> val;
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Invalid input. Please enter a whole number.\n";
+            continue;
+        }
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        return val;
+    }
+}
+
+double readDouble(const string& prompt, bool allowNegative = false) {
+    double val;
+    while (true) {
+        cout << prompt;
+        cin >> val;
+        if (cin.fail() || (!allowNegative && val < 0)) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Invalid input. Please enter a valid non-negative number.\n";
+            continue;
+        }
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        return val;
+    }
+}
+
+string readLine(const string& prompt, bool allowEmpty = false) {
+    string val;
+    while (true) {
+        cout << prompt;
+        getline(cin, val);
+        if (!allowEmpty && val.empty()) {
+            cout << "This field cannot be empty.\n";
+            continue;
+        }
+        return val;
+    }
+}
+
+class Salary {
+private:
+    double basic, allowance, deduction, tax;
+
+public:
+    Salary() : basic(0), allowance(0), deduction(0), tax(0) {}
+
+    Salary(double b, double a, double d, double t = 0)
+        : basic(b), allowance(a), deduction(d), tax(t) {}
+
+    double gross() const {
+        return basic + allowance;
+    }
+
+    double net() const {
+        return gross() - deduction - tax;
+    }
+
+    double getDeduction() const { return deduction; }
+    double getTax() const { return tax; }
+
+    void display() const {
+        cout << fixed << setprecision(2);
+        cout << "Basic Salary : Rs. " << basic << endl;
+        cout << "Allowances   : Rs. " << allowance << endl;
+        cout << "Gross Salary : Rs. " << gross() << endl;
+        cout << "Taxable Salary: Rs. " << gross() << endl;
+        cout << "Deductions   : Rs. " << deduction << endl;
+        cout << "Tax          : Rs. " << tax << endl;
+        cout << "Net Salary   : Rs. " << net() << endl;
+    }
+};
+
+class Attendance {
+private:
+    int workingDays;
+    int presentDays;
+
+public:
+    Attendance(int w = 0, int p = 0)
+        : workingDays(w), presentDays(p) {}
+
+    int getWorkingDays() const { return workingDays; }
+    int getPresentDays() const { return presentDays; }
+};
+
+class Department {
+private:
+    string name;
+    double budget;
+    int staffCount;
+
+public:
+    Department(string n = "", double b = 0)
+        : name(n), budget(b), staffCount(0) {}
+
+    string getName() const { return name; }
+    double getBudget() const { return budget; }
+    int getStaffCount() const { return staffCount; }
+
+    void addStaff() { staffCount++; }
+    void removeStaff() { if (staffCount > 0) staffCount--; }
+    void deduct(double amount) { budget -= amount; }
+
+    void display() const {
+        cout << fixed << setprecision(2);
+        cout << "Department  : " << name
+             << " | Staff: " << staffCount
+             << " | Remaining Budget: Rs. " << budget << endl;
+    }
+};
+
+bool validMonth(const string& month) {
+    if (month.size() != 7 || month[4] != '-') return false;
+    for (int i = 0; i < 7; i++) {
+        if (i == 4) continue;
+        if (month[i] < '0' || month[i] > '9') return false;
+    }
+    int m = (month[5] - '0') * 10 + (month[6] - '0');
+    return m >= 1 && m <= 12;
+}
+
+double calculateTax(double monthlyGross) {
+
+
+
+    if (monthlyGross <= 25000) return 0;
+    if (monthlyGross <= 50000) return monthlyGross * 0.05;
+    if (monthlyGross <= 100000) return monthlyGross * 0.10;
+    return monthlyGross * 0.15;
+}
+
+class Employee {
+protected:
+    int id;
+    string name;
+    string department;
+    double pay;
+
+public:
+    Employee(int i, string n, string d, double p)
+        : id(i), name(n), department(d), pay(p) {}
+
+    virtual ~Employee() {}
+
+    int getId() const { return id; }
+    string getName() const { return name; }
+    string getDepartment() const { return department; }
+    double getPay() const { return pay; }
+    void setName(const string& n) { name = n; }
+    void setDepartment(const string& d) { department = d; }
+    void setPay(double p) { pay = p; }
+
+    virtual string getType() const = 0;
+    virtual Salary calculateSalary(const Attendance& a, int paidLeaveDays = 0, int unpaidLeaveDays = 0) const = 0;
+
+    virtual void display() const {
+        cout << "\nEmployee ID : " << id << endl;
+        cout << "Name        : " << name << endl;
+        cout << "Type        : " << getType() << endl;
+        cout << "Department  : " << department << endl;
+        cout << "Pay Basis   : Rs. " << fixed << setprecision(2) << pay << endl;
+    }
+};
+
+class PermanentEmployee : public Employee {
+public:
+    PermanentEmployee(int i, string n, string d, double p)
+        : Employee(i, n, d, p) {}
+
+    string getType() const {
+        return "Permanent";
+    }
+
+    Salary calculateSalary(const Attendance& a, int paidLeaveDays = 0, int unpaidLeaveDays = 0) const {
+        double basic = pay;
+        int absent = a.getWorkingDays() - a.getPresentDays();
+        if (paidLeaveDays > absent) paidLeaveDays = absent;
+        int attendanceUnpaid = absent - paidLeaveDays > 2 ? absent - paidLeaveDays - 2 : 0;
+        int unpaid = attendanceUnpaid > unpaidLeaveDays ? attendanceUnpaid : unpaidLeaveDays;
+
+        if (a.getWorkingDays() > 0 && unpaid > 0)
+            basic = basic * (a.getWorkingDays() - unpaid) /
+                    (double)a.getWorkingDays();
+
+        double hra = basic * 0.20;
+        double da = basic * 0.10;
+        double pf = basic * 0.12;
+        double grossSalary = basic + hra + da;
+        double tax = calculateTax(grossSalary);
+
+        return Salary(basic, hra + da, pf, tax);
+    }
+};
+
+class ContractEmployee : public Employee {
+public:
+    ContractEmployee(int i, string n, string d, double p)
+        : Employee(i, n, d, p) {}
+
+    string getType() const {
+        return "Contract";
+    }
+
+    Salary calculateSalary(const Attendance& a, int paidLeaveDays = 0, int unpaidLeaveDays = 0) const {
+        int effectivePresent = a.getPresentDays() + paidLeaveDays;
+        if (effectivePresent > a.getWorkingDays()) effectivePresent = a.getWorkingDays();
+        if (unpaidLeaveDays > 0 && unpaidLeaveDays < effectivePresent)
+            effectivePresent -= unpaidLeaveDays;
+
+        double basic = pay * effectivePresent;
+        double allowance = basic * 0.05;
+        double tax = calculateTax(basic + allowance);
+
+        return Salary(basic, allowance, 0, tax);
+    }
+};
+
+class InternEmployee : public Employee {
+public:
+    InternEmployee(int i, string n, string d, double p)
+        : Employee(i, n, d, p) {}
+
+    string getType() const {
+        return "Intern";
+    }
+
+    Salary calculateSalary(const Attendance& a, int paidLeaveDays = 0, int unpaidLeaveDays = 0) const {
+        if (a.getWorkingDays() == 0)
+            return Salary();
+
+        int effectivePresent = a.getPresentDays() + paidLeaveDays;
+        if (effectivePresent > a.getWorkingDays()) effectivePresent = a.getWorkingDays();
+        if (unpaidLeaveDays > 0 && unpaidLeaveDays < effectivePresent)
+            effectivePresent -= unpaidLeaveDays;
+
+        double stipend = pay * effectivePresent /
+                         (double)a.getWorkingDays();
+        double tax = calculateTax(stipend);
+
+        return Salary(stipend, 0, 0, tax);
+    }
+};
+
+struct PayrollRecord {
+    int employeeId;
+    string employeeName;
+    string department;
+    Salary salary;
+    string status;
+    string month;
+
+    PayrollRecord(int id, string n, string dept, Salary s, string m)
+        : employeeId(id), employeeName(n), department(dept), salary(s),
+          status("Pending"), month(m) {}
+};
+
+struct LeaveRecord {
+    int employeeId;
+    string month;
+    int days;
+    string type;
+    string status;
+
+    LeaveRecord(int id, string m, int d, string t)
+        : employeeId(id), month(m), days(d), type(t), status("Pending") {}
+};
+
+struct LeaveBalance {
+    int employeeId;
+    int paidLeave;
+    int unpaidLeave;
+
+    LeaveBalance(int id) : employeeId(id), paidLeave(12), unpaidLeave(0) {}
+};
+
+class Report {
+public:
+    static void payrollSummary(const vector<PayrollRecord>& payrolls) {
+        if (payrolls.empty()) {
+            cout << "\nNo payroll data to summarize yet.\n";
+            return;
+        }
+
+        double totalGross = 0, totalDeduction = 0, totalTax = 0, totalNet = 0;
+        int approved = 0, pending = 0;
+
+        for (size_t i = 0; i < payrolls.size(); i++) {
+            totalGross += payrolls[i].salary.gross();
+            totalDeduction += payrolls[i].salary.getDeduction();
+            totalTax += payrolls[i].salary.getTax();
+            totalNet += payrolls[i].salary.net();
+            if (payrolls[i].status == "Approved") approved++;
+            else pending++;
+        }
+
+        cout << fixed << setprecision(2);
+        cout << "\n========== PAYROLL SUMMARY REPORT ==========\n";
+        cout << "Records Processed   : " << payrolls.size() << endl;
+        cout << "Total Gross Payout  : Rs. " << totalGross << endl;
+        cout << "Total Other Deductions: Rs. " << totalDeduction << endl;
+        cout << "Total Tax Deducted  : Rs. " << totalTax << endl;
+        cout << "Total Net Payout    : Rs. " << totalNet << endl;
+        cout << "Approved Records    : " << approved << endl;
+        cout << "Pending Records     : " << pending << endl;
+    }
+
+    static void departmentSummary(const vector<Department>& departments) {
+        if (departments.empty()) {
+            cout << "\nNo department data yet.\n";
+            return;
+        }
+
+        cout << "\n========== DEPARTMENT SUMMARY REPORT ==========\n";
+        for (size_t i = 0; i < departments.size(); i++)
+            departments[i].display();
+    }
+};
+
+class PayrollSystem {
+private:
+    vector<Employee*> employees;
+    vector<PayrollRecord> payrolls;
+    vector<Department> departments;
+    vector<LeaveRecord> leaveRecords;
+    vector<LeaveBalance> leaveBalances;
+    Department& getOrCreateDepartment(const string& deptName) {
+        for (size_t i = 0; i < departments.size(); i++) {
+            if (departments[i].getName() == deptName)
+                return departments[i];
+        }
+        departments.push_back(Department(deptName, 0));
+        return departments.back();
+    }
+
+    LeaveBalance& getLeaveBalance(int employeeId) {
+        for (size_t i = 0; i < leaveBalances.size(); i++)
+            if (leaveBalances[i].employeeId == employeeId) return leaveBalances[i];
+        leaveBalances.push_back(LeaveBalance(employeeId));
+        return leaveBalances.back();
+    }
+
+    int getApprovedUnpaidLeave(int employeeId, const string& month) const {
+        int total = 0;
+        for (size_t i = 0; i < leaveRecords.size(); i++)
+            if (leaveRecords[i].employeeId == employeeId &&
+                leaveRecords[i].month == month &&
+                leaveRecords[i].type == "Unpaid" &&
+                leaveRecords[i].status == "Approved")
+                total += leaveRecords[i].days;
+        return total;
+    }
+
+    int getApprovedPaidLeave(int employeeId, const string& month) const {
+        int total = 0;
+        for (size_t i = 0; i < leaveRecords.size(); i++)
+            if (leaveRecords[i].employeeId == employeeId &&
+                leaveRecords[i].month == month &&
+                leaveRecords[i].type == "Paid" &&
+                leaveRecords[i].status == "Approved")
+                total += leaveRecords[i].days;
+        return total;
+    }
+
+    bool payrollExists(int employeeId, const string& month) const {
+        for (size_t i = 0; i < payrolls.size(); i++)
+            if (payrolls[i].employeeId == employeeId && payrolls[i].month == month) return true;
+        return false;
+    }
+
+    void ensureLeaveBalance(int employeeId) { getLeaveBalance(employeeId); }
+
+public:
+    ~PayrollSystem() {
+        for (size_t i = 0; i < employees.size(); i++)
+            delete employees[i];
+    }
+
+    void addSampleEmployees() {
+        if (!employees.empty()) {
+            cout << "\nSample employees already loaded.\n";
+            return;
+        }
+
+        employees.push_back(
+            new PermanentEmployee(1001, "Ravi", "HR", 30000));
+        employees.push_back(
+            new ContractEmployee(1002, "Sita", "Engineering", 1200));
+        employees.push_back(
+            new InternEmployee(1003, "Kiran", "Finance", 12000));
+
+        getOrCreateDepartment("HR").addStaff();
+        getOrCreateDepartment("Engineering").addStaff();
+        getOrCreateDepartment("Finance").addStaff();
+        ensureLeaveBalance(1001);
+        ensureLeaveBalance(1002);
+        ensureLeaveBalance(1003);
+
+        cout << "\n3 sample employees added successfully.\n";
+    }
+
+    Employee* findEmployee(int id) {
+        for (size_t i = 0; i < employees.size(); i++) {
+            if (employees[i]->getId() == id)
+                return employees[i];
+        }
+        return NULL;
+    }
+
+    void showEmployees() const {
+        if (employees.empty()) {
+            cout << "\nNo employees available.\n";
+            return;
+        }
+
+        cout << "\n========== EMPLOYEE LIST ==========\n";
+        for (size_t i = 0; i < employees.size(); i++)
+            employees[i]->display();
+    }
+
+    void addEmployee() {
+        int id = readInt("\nEnter Employee ID: ");
+
+        if (findEmployee(id) != NULL) {
+            cout << "Employee ID already exists.\n";
+            return;
+        }
+
+        string name = readLine("Enter Name: ");
+        string dept = readLine("Enter Department: ");
+        double pay = readDouble("Enter Pay Amount: ");
+
+        int type = readInt("\n1. Permanent\n2. Contract\n3. Intern\nChoose Employee Type: ");
+
+        if (type == 1)
+            employees.push_back(new PermanentEmployee(id, name, dept, pay));
+        else if (type == 2)
+            employees.push_back(new ContractEmployee(id, name, dept, pay));
+        else if (type == 3)
+            employees.push_back(new InternEmployee(id, name, dept, pay));
+        else {
+            cout << "Invalid type. Employee not added.\n";
+            return;
+        }
+
+        getOrCreateDepartment(dept).addStaff();
+        cout << "\nEmployee added successfully.\n";
+    }
+    void updateEmployee() {
+        int id = readInt("\nEnter Employee ID to update: ");
+        Employee* e = findEmployee(id);
+
+        if (e == NULL) {
+            cout << "Employee not found.\n";
+            return;
+        }
+
+        e->display();
+
+        int choice = readInt("\n1. Update Name\n2. Update Department\n3. Update Pay\n0. Cancel\nChoice: ");
+
+        if (choice == 1) {
+            e->setName(readLine("Enter new name: "));
+            cout << "Name updated.\n";
+        } else if (choice == 2) {
+            string oldDept = e->getDepartment();
+            string newDept = readLine("Enter new department: ");
+            getOrCreateDepartment(oldDept).removeStaff();
+            getOrCreateDepartment(newDept).addStaff();
+            e->setDepartment(newDept);
+            cout << "Department updated.\n";
+        } else if (choice == 3) {
+            e->setPay(readDouble("Enter new pay amount: "));
+            cout << "Pay updated.\n";
+        } else {
+            cout << "Update cancelled.\n";
+        }
+    }
+    void deleteEmployee() {
+        int id = readInt("\nEnter Employee ID to delete: ");
+
+        for (size_t i = 0; i < employees.size(); i++) {
+            if (employees[i]->getId() == id) {
+                getOrCreateDepartment(employees[i]->getDepartment()).removeStaff();
+                delete employees[i];
+                employees.erase(employees.begin() + i);
+                cout << "\nEmployee " << id << " deleted successfully.\n";
+                return;
+            }
+        }
+
+        cout << "Employee not found.\n";
+    }
+
+    void processPayroll() {
+        if (employees.empty()) {
+            cout << "\nNo employees available.\n";
+            return;
+        }
+
+        int id = readInt("\nEnter Employee ID: ");
+        Employee* e = findEmployee(id);
+
+        if (e == NULL) {
+            cout << "Employee not found.\n";
+            return;
+        }
+
+        string month = readLine("Enter payroll month (YYYY-MM): ");
+        if (!validMonth(month)) {
+            cout << "Invalid month format. Use YYYY-MM.\n";
+            return;
+        }
+
+        if (payrollExists(id, month)) {
+            cout << "Payroll already exists for this employee and month.\n";
+            return;
+        }
+
+        int working = readInt("Enter Working Days: ");
+        int present = readInt("Enter Present Days: ");
+
+        if (working <= 0 || present < 0 || present > working) {
+            cout << "Invalid attendance (present days cannot exceed working days).\n";
+            return;
+        }
+
+        int paidLeave = getApprovedPaidLeave(id, month);
+        int unpaidLeave = getApprovedUnpaidLeave(id, month);
+        if (paidLeave > working - present) paidLeave = working - present;
+        if (unpaidLeave > present) unpaidLeave = present;
+
+        Attendance attendance(working, present);
+        Salary salary = e->calculateSalary(attendance, paidLeave, unpaidLeave);
+
+        payrolls.push_back(
+            PayrollRecord(e->getId(), e->getName(), e->getDepartment(), salary, month));
+
+        getOrCreateDepartment(e->getDepartment()).deduct(salary.net());
+
+        cout << "\nApproved paid leave days applied  : " << paidLeave << endl;
+        cout << "Approved unpaid leave days applied: " << unpaidLeave << endl;
+        cout << "\n========== PAYSLIP ==========\n";
+        e->display();
+        cout << "Payroll Month: " << month << endl;
+        cout << endl;
+        salary.display();
+        cout << "\nStatus : Pending\n";
+    }
+
+    void applyLeave() {
+        int id = readInt("\nEnter Employee ID: ");
+        if (findEmployee(id) == NULL) {
+            cout << "Employee not found.\n";
+            return;
+        }
+
+        string month = readLine("Enter leave month (YYYY-MM): ");
+        int days = readInt("Enter number of leave days: ");
+        if (days <= 0) {
+            cout << "Leave days must be greater than zero.\n";
+            return;
+        }
+
+        int type = readInt("1. Paid Leave\n2. Unpaid Leave\nChoose Leave Type: ");
+        if (type != 1 && type != 2) {
+            cout << "Invalid leave type.\n";
+            return;
+        }
+
+        string leaveType = (type == 1) ? "Paid" : "Unpaid";
+        LeaveRecord record(id, month, days, leaveType);
+        leaveRecords.push_back(record);
+        cout << "Leave request submitted successfully. Status: Pending\n";
+    }
+
+    void showLeaves() const {
+        if (leaveRecords.empty()) {
+            cout << "\nNo leave requests available.\n";
+            return;
+        }
+        cout << "\n========== LEAVE REQUESTS ==========\n";
+        for (size_t i = 0; i < leaveRecords.size(); i++) {
+            cout << "Request " << i + 1
+                 << " | Employee: " << leaveRecords[i].employeeId
+                 << " | Month: " << leaveRecords[i].month
+                 << " | Days: " << leaveRecords[i].days
+                 << " | Type: " << leaveRecords[i].type
+                 << " | Status: " << leaveRecords[i].status << endl;
+        }
+    }
+
+    void approveLeave() {
+        if (leaveRecords.empty()) {
+            cout << "\nNo leave requests to process.\n";
+            return;
+        }
+
+        showLeaves();
+        int requestNo = readInt("Enter request number (0 = cancel): ");
+        if (requestNo == 0) return;
+        if (requestNo < 1 || requestNo > (int)leaveRecords.size()) {
+            cout << "Invalid request number.\n";
+            return;
+        }
+
+        LeaveRecord& r = leaveRecords[requestNo - 1];
+        if (r.status != "Pending") {
+            cout << "This request is already processed.\n";
+            return;
+        }
+
+        int action = readInt("1. Approve\n2. Reject\nChoose: ");
+        if (action != 1 && action != 2) {
+            cout << "Invalid choice.\n";
+            return;
+        }
+
+        if (action == 2) {
+            r.status = "Rejected";
+            cout << "Leave request rejected.\n";
+            return;
+        }
+
+        LeaveBalance& b = getLeaveBalance(r.employeeId);
+        if (r.type == "Paid") {
+            if (r.days > b.paidLeave) {
+                cout << "Insufficient paid leave balance.\n";
+                return;
+            }
+            b.paidLeave -= r.days;
+        } else {
+            b.unpaidLeave += r.days;
+        }
+
+        r.status = "Approved";
+        cout << "Leave request approved.\n";
+    }
+
+    void showLeaveBalances() const {
+        if (leaveBalances.empty()) {
+            cout << "\nNo leave balances available.\n";
+            return;
+        }
+        cout << "\n========== LEAVE BALANCES ==========\n";
+        for (size_t i = 0; i < leaveBalances.size(); i++)
+            cout << "Employee " << leaveBalances[i].employeeId
+                 << " | Paid Leave: " << leaveBalances[i].paidLeave
+                 << " | Approved Unpaid Leave: " << leaveBalances[i].unpaidLeave << endl;
+    }
+
+    void showPayroll() const {
+        if (payrolls.empty()) {
+            cout << "\nNo payroll records available.\n";
+            return;
+        }
+
+        cout << "\n========== PAYROLL REPORT ==========\n";
+        for (size_t i = 0; i < payrolls.size(); i++) {
+            cout << "\nEmployee ID   : " << payrolls[i].employeeId << endl;
+            cout << "Employee Name : " << payrolls[i].employeeName << endl;
+            cout << "Department    : " << payrolls[i].department << endl;
+            cout << "Payroll Month : " << payrolls[i].month << endl;
+            cout << "Tax           : Rs. " << fixed << setprecision(2) << payrolls[i].salary.getTax() << endl;
+            cout << "Net Salary    : Rs. "
+                 << fixed << setprecision(2)
+                 << payrolls[i].salary.net() << endl;
+            cout << "Status        : " << payrolls[i].status << endl;
+        }
+    }
+
+    void approvePayroll() {
+        if (payrolls.empty()) {
+            cout << "\nNo payroll records to approve.\n";
+            return;
+        }
+
+        int count = 0;
+        for (size_t i = 0; i < payrolls.size(); i++) {
+            if (payrolls[i].status == "Pending") {
+                payrolls[i].status = "Approved";
+                count++;
+            }
+        }
+
+        cout << "\n" << count << " payroll record(s) approved.\n";
+    }
+
+    void showReports() const {
+        Report::payrollSummary(payrolls);
+        Report::departmentSummary(departments);
+    }
+
+    void saveEmployees() const {
+        ofstream file("employees.txt");
+
+        if (!file) {
+            cout << "Unable to open file.\n";
+            return;
+        }
+
+        for (size_t i = 0; i < employees.size(); i++) {
+            file << employees[i]->getId() << "|"
+                 << employees[i]->getName() << "|"
+                 << employees[i]->getType() << "|"
+                 << employees[i]->getDepartment() << "|"
+                 << fixed << setprecision(2) << employees[i]->getPay() << "\n";
+        }
+
+        file.close();
+        cout << "\nEmployee data saved to employees.txt\n";
+    }
+    void loadEmployees() {
+        ifstream file("employees.txt");
+        if (!file) return;
+
+        string line;
+        int loaded = 0;
+
+        while (getline(file, line)) {
+            if (line.empty()) continue;
+
+            stringstream ss(line);
+            string idStr, name, type, dept, payStr;
+
+            getline(ss, idStr, '|');
+            getline(ss, name, '|');
+            getline(ss, type, '|');
+            getline(ss, dept, '|');
+            getline(ss, payStr, '|');
+
+            if (idStr.empty()) continue;
+
+            int id = 0;
+            double pay = 0;
+            stringstream(idStr) >> id;
+            if (!payStr.empty()) stringstream(payStr) >> pay;
+
+            if (findEmployee(id) != NULL) continue;
+
+            if (type == "Permanent")
+                employees.push_back(new PermanentEmployee(id, name, dept, pay));
+            else if (type == "Contract")
+                employees.push_back(new ContractEmployee(id, name, dept, pay));
+            else if (type == "Intern")
+                employees.push_back(new InternEmployee(id, name, dept, pay));
+            else
+                continue;
+
+            getOrCreateDepartment(dept).addStaff();
+            ensureLeaveBalance(id);
+            loaded++;
+        }
+
+        file.close();
+        if (loaded > 0)
+            cout << "\nLoaded " << loaded << " employee record(s) from employees.txt\n";
+    }
+
+    void savePayroll() const {
+        ofstream file("payroll.txt");
+
+        if (!file) {
+            cout << "Unable to open file.\n";
+            return;
+        }
+
+        for (size_t i = 0; i < payrolls.size(); i++) {
+            file << payrolls[i].employeeId << "|"
+                 << payrolls[i].employeeName << "|"
+                 << payrolls[i].month << "|"
+                 << fixed << setprecision(2)
+                 << payrolls[i].salary.net() << "|"
+                 << payrolls[i].salary.getTax() << "|"
+                 << payrolls[i].status << "\n";
+        }
+
+        file.close();
+        cout << "\nPayroll data saved to payroll.txt\n";
+    }
+
+    void saveLeaves() const {
+        ofstream file("leaves.txt");
+        if (!file) {
+            cout << "Unable to open leaves.txt.\n";
+            return;
+        }
+
+        for (size_t i = 0; i < leaveRecords.size(); i++)
+            file << leaveRecords[i].employeeId << "|"
+                 << leaveRecords[i].month << "|"
+                 << leaveRecords[i].days << "|"
+                 << leaveRecords[i].type << "|"
+                 << leaveRecords[i].status << "\n";
+
+        file.close();
+        cout << "\nLeave data saved to leaves.txt\n";
+    }
+
+    void loadLeaves() {
+        ifstream file("leaves.txt");
+        if (!file) return;
+
+        string line;
+        while (getline(file, line)) {
+            if (line.empty()) continue;
+            stringstream ss(line);
+            string idStr, month, daysStr, type, status;
+            getline(ss, idStr, '|');
+            getline(ss, month, '|');
+            getline(ss, daysStr, '|');
+            getline(ss, type, '|');
+            getline(ss, status, '|');
+
+            int id = 0, days = 0;
+            stringstream(idStr) >> id;
+            stringstream(daysStr) >> days;
+            if (findEmployee(id) == NULL || !validMonth(month) || days <= 0 ||
+                (type != "Paid" && type != "Unpaid")) continue;
+
+            LeaveRecord r(id, month, days, type);
+            r.status = status.empty() ? "Pending" : status;
+            leaveRecords.push_back(r);
+
+            if (r.status == "Approved") {
+                LeaveBalance& b = getLeaveBalance(id);
+                if (r.type == "Paid" && r.days <= b.paidLeave) b.paidLeave -= r.days;
+                else if (r.type == "Unpaid") b.unpaidLeave += r.days;
+            }
+        }
+        file.close();
+    }
+
+    void employeePayslip() {
+        int id = readInt("\nEnter Employee ID: ");
+        Employee* e = findEmployee(id);
+
+        if (e == NULL) {
+            cout << "Employee not found.\n";
+            return;
+        }
+
+        bool found = false;
+        for (size_t i = 0; i < payrolls.size(); i++) {
+            if (payrolls[i].employeeId == id) {
+                cout << "\n========== MY PAYSLIP ==========\n";
+                e->display();
+                cout << endl;
+                payrolls[i].salary.display();
+                cout << "Payroll Month : " << payrolls[i].month << endl;
+                cout << "Tax : Rs. " << fixed << setprecision(2) << payrolls[i].salary.getTax() << endl;
+                cout << "Status : " << payrolls[i].status << endl;
+                found = true;
+            }
+        }
+
+        if (!found)
+            cout << "\nNo payslip found.\n";
+    }
+};
+
+bool login(string& role) {
+    string username, password;
+
+    cout << "\n========== LOGIN ==========\n";
+    username = readLine("Username: ", true);
+    password = readLine("Password: ", true);
+
+    if (username == "hr" && password == "hr123") {
+        role = "HR";
+        return true;
+    }
+    if (username == "finance" && password == "fin123") {
+        role = "FINANCE";
+        return true;
+    }
+    if (username == "E1001" && password == "pass1001") {
+        role = "EMPLOYEE";
+        return true;
+    }
+
+    return false;
+}
+
+void hrMenu(PayrollSystem& system) {
+    int choice;
+
+    do {
+        cout << "\n========== HR MENU ==========\n";
+        cout << "1. Add Employee\n";
+        cout << "2. Update Employee\n";
+        cout << "3. Delete Employee\n";
+        cout << "4. View Employees\n";
+        cout << "5. Process Payroll\n";
+        cout << "6. View Payroll Report\n";
+        cout << "7. Save Employee Data\n";
+        cout << "8. Save Payroll Data\n";
+        cout << "9. Apply Leave\n";
+        cout << "10. View Leave Requests\n";
+        cout << "11. View Leave Balances\n";
+        cout << "12. Save Leave Data\n";
+        cout << "0. Logout\n";
+        choice = readInt("Choice: ");
+
+        switch (choice) {
+        case 1: system.addEmployee(); break;
+        case 2: system.updateEmployee(); break;
+        case 3: system.deleteEmployee(); break;
+        case 4: system.showEmployees(); break;
+        case 5: system.processPayroll(); break;
+        case 6: system.showPayroll(); break;
+        case 7: system.saveEmployees(); break;
+        case 8: system.savePayroll(); break;
+        case 9: system.applyLeave(); break;
+        case 10: system.showLeaves(); break;
+        case 11: system.showLeaveBalances(); break;
+        case 12: system.saveLeaves(); break;
+        case 0: cout << "Logged out.\n"; break;
+        default: cout << "Invalid choice.\n";
+        }
+    } while (choice != 0);
+}
+
+void financeMenu(PayrollSystem& system) {
+    int choice;
+
+    do {
+        cout << "\n========== FINANCE MENU ==========\n";
+        cout << "1. View Payroll\n";
+        cout << "2. Approve Pending Payroll\n";
+        cout << "3. Save Payroll\n";
+        cout << "4. View Summary Reports\n";
+        cout << "5. View Leave Requests\n";
+        cout << "6. Approve Leave Request\n";
+        cout << "7. View Leave Balances\n";
+        cout << "0. Logout\n";
+        choice = readInt("Choice: ");
+
+        switch (choice) {
+        case 1: system.showPayroll(); break;
+        case 2: system.approvePayroll(); break;
+        case 3: system.savePayroll(); break;
+        case 4: system.showReports(); break;
+        case 5: system.showLeaves(); break;
+        case 6: system.approveLeave(); break;
+        case 7: system.showLeaveBalances(); break;
+        case 0: cout << "Logged out.\n"; break;
+        default: cout << "Invalid choice.\n";
+        }
+    } while (choice != 0);
+}
+
+void employeeMenu(PayrollSystem& system) {
+    int choice;
+
+    do {
+        cout << "\n========== EMPLOYEE MENU ==========\n";
+        cout << "1. View My Payslip\n";
+        cout << "2. Apply Leave\n";
+        cout << "0. Logout\n";
+        choice = readInt("Choice: ");
+
+        switch (choice) {
+        case 1: system.employeePayslip(); break;
+        case 2: system.applyLeave(); break;
+        case 0: cout << "Logged out.\n"; break;
+        default: cout << "Invalid choice.\n";
+        }
+    } while (choice != 0);
+}
+
+int main() {
+    PayrollSystem system;
+    system.loadEmployees();
+    system.addSampleEmployees();
+    system.loadLeaves();
+
+    int choice;
+    string role;
+
+    do {
+        cout << "\n=====================================\n";
+        cout << "       EMPLOYEE PAYROLL SYSTEM\n";
+        cout << "=====================================\n";
+        cout << "1. Login\n";
+        cout << "2. Reload Sample Employees\n";
+        cout << "0. Exit\n";
+        choice = readInt("Choice: ");
+
+        switch (choice) {
+        case 1:
+            if (login(role)) {
+                cout << "\nLogin successful. Role: " << role << endl;
+
+                if (role == "HR") hrMenu(system);
+                else if (role == "FINANCE") financeMenu(system);
+                else if (role == "EMPLOYEE") employeeMenu(system);
+            } else {
+                cout << "\nInvalid username or password.\n";
+            }
+            break;
+
+        case 2:
+            system.addSampleEmployees();
+            break;
+
+        case 0:
+            cout << "\nThank you for using Employee Payroll System.\n";
+            break;
+
+        default:
+            cout << "Invalid choice.\n";
+        }
+
+    } while (choice != 0);
+
+    return 0;
+}
